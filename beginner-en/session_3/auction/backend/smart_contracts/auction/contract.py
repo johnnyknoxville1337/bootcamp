@@ -134,6 +134,16 @@ def bid(payment: pt.abi.PaymentTransaction) -> pt.Expr:
         # Assert the receiver is the contract address
         pt.Assert(payment.get().receiver() == pt.Global.current_application_address()),
         
+        # OLD WAY:
+        # if there is a previous bidder
+        # then send back the previous bid to their account
+        # NEW WAY:
+        # save bid amount in local state
+        # REASON for CHANGING:
+        # - algorand requires any accounts used in an inner transaction, to be pre-defined
+        # - this means there's a possible race condition, only allowing one bider per block
+
+
         # Update global state: update previous bidder to current caller
         app.state.previous_bidder.set(payment.get().sender()),
 
@@ -148,14 +158,34 @@ def bid(payment: pt.abi.PaymentTransaction) -> pt.Expr:
     )
 
 
+@pt.Subroutine(pt.TealType.none)
+def pay(receiver: pt.Expr,  amount: pt.Expr) -> pt.Expr:
+    return pt.InnerTxnBuilder.Execute(
+        {
+        pt.TxnField.type_enum: pt.TxnType.Payment,
+        pt.TxnField.fee: pt.Int(0),
+        pt.TxnField.amount: amount,
+        pt.TxnField.receiver: receiver
+        }
+    )
+
 # reclaim_bids method that allows someone to reclaim bids they have previously placed
+@app.external()
 def reclaim_bids() -> pt.Expr:
     # Sends a payment via a inner transaction (InnerTxnBuilder.execute())
     return pt.Seq(
         # If the claimer is the previous bidder, reuturn claimable bids - previous_bid
+        # if cond:
+        #   whatever we want to happen
+        # -
+        #  we cannot use python if conditions, we must use pt.if
+        pt.If(pt.Txn.sender() == app.state.previous_bidder.get())
+        # then return (send payment) claimable bids - previous_bid
+        .Then()
         
         # Else return full claimable amount
     )
+
 
 
 # claim_asset method that allows the winner to claim the asset
