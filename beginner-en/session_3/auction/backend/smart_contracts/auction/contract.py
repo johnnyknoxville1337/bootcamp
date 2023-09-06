@@ -180,10 +180,22 @@ def reclaim_bids() -> pt.Expr:
         # -
         #  we cannot use python if conditions, we must use pt.if
         pt.If(pt.Txn.sender() == app.state.previous_bidder.get())
-        # then return (send payment) claimable bids - previous_bid
-        .Then()
-        
+        # then return (send payment) claimable bids(local state) - previous_bid (global state)
+        .Then(
+            pay(
+                pt.Txn.sender(),  
+                app.state.claimable_amount[pt.Txn.sender().get()] - app.state.previous_bid.get(),
+
+            )
+        )
         # Else return full claimable amount
+        .Else(
+             pay(
+                pt.Txn.sender(),  
+                app.state.claimable_amount[pt.Txn.sender().get()],
+
+            )
+        )
     )
 
 

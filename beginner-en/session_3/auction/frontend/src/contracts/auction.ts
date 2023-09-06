@@ -106,7 +106,7 @@ export type OnCompleteUpdApp =  { onCompleteAction: 'update_application' | OnApp
  */
 export type IntegerState = {
   /**
-   * Gets the state value as a BigInt 
+   * Gets the state value as a BigInt
    */
   asBigInt(): bigint
   /**
