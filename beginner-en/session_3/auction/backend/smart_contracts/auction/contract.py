@@ -123,12 +123,25 @@ def opt_in() -> pt.Expr:
 def bid(payment: pt.abi.PaymentTransaction) -> pt.Expr:
     return pt.Seq(
         # Verify the auction hasn't ended
+        pt.Assert(app.state.auction_end.get() > pt.Global.latest_timestamp()),
+
         # Verify the auction has started
+        pt.Assert(app.state.auction_end.get() != pt.Int(0)),
+
         # Assert the bid amount is greater than the previous bid
+        pt.Assert(payment.get().amount() > app.state.previous_bid_get()),
+
         # Assert the receiver is the contract address
+        pt.Assert(payment.get().receiver() == pt.Global.current_application_address()),
+        
         # Update global state: update previous bidder to current caller
+        app.state.previous_bidder.set(payment.get().sender()),
+
         # Update global state: update previous_bid to current bid
+        app.state.previous_bid.set(payment.get().amount()),
+
         # Update local state: Add bid to claimable bids
+
         app.state.claimable_amount[pt.Txn.sender()].set(
             app.state.claimable_amount[pt.Txn.sender()] + payment.get().amount()
         ),
@@ -140,6 +153,7 @@ def reclaim_bids() -> pt.Expr:
     # Sends a payment via a inner transaction (InnerTxnBuilder.execute())
     return pt.Seq(
         # If the claimer is the previous bidder, reuturn claimable bids - previous_bid
+        
         # Else return full claimable amount
     )
 
